@@ -173,14 +173,14 @@
 				const f = mapf.reduce((acc, x) => _ => x(acc(_)));
 				const mapf2 = maps.map(map => {
 					map = map.slice(1).map(x => x.split(' ').map(x => parseInt(x)));
-					return ranges => ranges.map(([a,b]) => {
-						const ranges = [[a,b,0]];
-							let i = 0;
-							ranges.forEach(([from, to]) => {
-								for (const [dest, src, range] of map) {
-									const diff = dest-src;
-									if (from >= src+range) continue;
-	                if (from >= src) { 
+					return ranges => ranges.map(([from,to]) => {
+						const ranges = [[from,to,0]];
+							for (const [dest, src, range] of map) {
+								const diff = dest-src;
+								let i = 0;
+								ranges.forEach(([from, to], i) => {
+									if (from >= src+range) return ++i;
+	                if (from >= src) {
 	              		ranges.splice(i--, 1);
 	                	if (to < src + range) {
 	                		ranges.push([from, to, diff]);
@@ -191,7 +191,7 @@
 	                	}
 	                }
 	                else {
-	                	if (to < src) continue;
+	                	if (to < src) return ++i;
 	                	ranges.splice(i--, 1);
 	                	if (to < src + range) {
 	                		ranges.push([from,src-1,0]);
@@ -204,8 +204,8 @@
 	                	}
 	                }
 	                ++i;
-								}
-            	});
+								});
+							}
 						return ranges.map(([a,b,d]) => {
 							a = a+d;
 							b = b+d;
