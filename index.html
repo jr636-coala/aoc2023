@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			body { color: white; }
+		</style>
+	</head>
+	<body>
+		<div>Day 1 <span id=d1></span></div>
+		<div>Day 2 <span id=d2></span></div>
+		<div>Day 3 <span id=d3></span></div>
+		<div>Day 4 <span id=d4></span></div>
+		<div>Day 5 <span id=d5></span></div>
+		<div>Day 6 <span id=d6></span></div>
+		<div>Day 7 <span id=d7></span></div>
+		<div>Day 8 <span id=d8></span></div>
+		<div>Day 9 <span id=d9></span></div>
+		<div>Day 10 <span id=d10></span></div>
+		<div>Day 11 <span id=d11></span></div>
+		<div>Day 12 <span id=d12></span></div>
+		<div>Day 13 <span id=d13></span></div>
+		<div>Day 14 <span id=d14></span></div>
+		<div>Day 15 <span id=d15></span></div>
+		<div>Day 16 <span id=d16></span></div>
+		<div>Day 17 <span id=d17></span></div>
+		<div>Day 18 <span id=d18></span></div>
+		<div>Day 19 <span id=d19></span></div>
+		<div>Day 20 <span id=d20></span></div>
+		<div>Day 21 <span id=d21></span></div>
+		<div>Day 22 <span id=d22></span></div>
+		<div>Day 23 <span id=d23></span></div>
+		<div>Day 24 <span id=d24></span></div>
+		<div>Day 25 <span id=d25></span></div>
+		<script>
+			const day1 = inp => {
+				const lines = inp.split('\n');
+				const calib = x => {
+					const letters = x.split('');
+					return letters.find(x => /[0-9]/.test(x)) + letters.findLast(x => /[0-9]/.test(x));
+				};
+				const speltnums = ['one','two','three','four','five','six','seven','eight','nine'];
+				const speltregex = new RegExp(`[0-9]|${speltnums.map(x => `(?=${x})`).join('|')}`, 'g');
+				const calibspell = x => {
+					const matches = Array.from(x.matchAll(speltregex));
+					const _get = y => y[0] || `${speltnums.findIndex(z => x.startsWith(z, y.index)) + 1}`;
+					return _get(matches[0]) + _get(matches.pop());
+				}
+				return [
+					lines.reduce((acc,x) => acc+(calib(x)|0),0),
+					lines.reduce((acc,x) => acc+(calibspell(x)|0),0)];
+			};
+			const day2 = inp => {
+				const parseGame = game => {
+					let found = game.indexOf(':');
+					const id = game.substring('Game '.length, found)|0;
+					const rounds = game.substr(found+1).split(';').map(round => {
+						const bucket = {red:0,green:0,blue:0};
+						round.split(',').forEach(x => {
+							const num = x.substr(0, x.match(/[a-z]/).index);
+							const color = x.match(/[a-z]+/);
+							bucket[color] = num|0;
+						});
+						return bucket;
+					});
+					return { id, rounds };
+				};
+				const games = inp.split('\n').map(parseGame);
+				const min = games.map(x => {
+					const min = { red: 0, green: 0, blue: 0 };
+					x.rounds.forEach(x => {
+						Object.keys(x).forEach((key,_,a) => {
+							if (x[key] > min[key]) {
+								a.forEach(key => min[key] = Math.max(x[key],min[key]));
+							}
+						});
+					});
+					return min;
+				});
+				return [
+					games.reduce((acc, x) => acc+(x.rounds.some(x => x.red > 12 || x.green > 13 || x.blue > 14) ? 0 : x.id), 0),
+					min.reduce((acc, x) => acc + Object.keys(x).reduce((acc, k) => acc*x[k], 1), 0)
+				]
+			};
+			const day3 = inp => {
+				const lines = inp.split('\n');
+				const parts = lines.map(x => Array.from(x.matchAll(/[0-9]+/g))).map((nums,y) => {
+					return nums.filter(num => {
+						const t = y-1;
+						const b = y+1;
+						const l = num.index-1;
+						const r = num.index+num[0].length;
+						for (let i = t; i <= b; ++i) {
+							for (let j = l; j <= r; ++j) {
+								const ch = lines[i]?.[j];
+								if (ch && ch !== '.' && !/[0-9]/.test(ch)) return true;
+							}
+						}
+					});
+				}).flat().map(x => x[0]|0);
+				const pgears = lines.map(x => Array.from(x.matchAll(/[0-9]+/g))).map((nums,y) => {
+					return nums.map(num => {
+						const t = y-1;
+						const b = y+1;
+						const l = num.index-1;
+						const r = num.index+num[0].length;
+						const g = [];
+						for (let i = t; i <= b; ++i) {
+							for (let j = l; j <= r; ++j) {
+								const ch = lines[i]?.[j];
+								if (ch === '*') {
+									g.push([`${i},${j}`,num[0]]);
+								}
+							}
+						}
+						return g;
+					}).filter(x => x.length);
+				}).flat(2);
+				const pgearsmap = {};
+				pgears.forEach(([k,v]) => {
+					pgearsmap[k] ??= [];
+					pgearsmap[k].push(v);
+				});
+				const gears = Object.keys(pgearsmap)
+					.filter(key => pgearsmap[key].length === 2)
+					.map(key => pgearsmap[key][0]*pgearsmap[key][1]);
+				return [
+					parts.reduce((acc,x) => acc+x),
+					gears.reduce((acc,x) => acc+x)
+				];
+			};
+			const day4 = inp => {
+				const parseCard = card => {
+					let found = card.indexOf(':');
+					const id = card.substring('Card '.length, found)|0;
+					const [win, nums] = card.substr(found+1).split('|').map(x => x.split(' ').filter(x => x.trim()).map(x => x | 0));
+					return { id, win, nums };
+				};
+				
+				const cards = inp.split('\n').map(parseCard);
+				const points = cards.map(x => x.nums.filter(y => x.win.includes(y)).length);
+				const pmap = new Array(points.length).fill(0);
+				for (let i = points.length; i--;) {
+					const p = points[i];
+					let sum = 0;
+					for (let j = 1; j <= p; ++j) {
+						const _p = pmap[i + j];
+						if (_p !== undefined) {
+							sum += _p + 1;
+						}
+					}
+					pmap[i] = sum;
+				}
+				return [
+					points.reduce((acc,x) => acc+((2**(x-1))|0), 0),
+					pmap.reduce((acc,x) => acc+x)+points.length
+				];
+			};
+			const day5 = inp => {
+				let [seeds, ...maps] = inp.split('\n\n').map(x => x.split('\n'));
+				seeds = seeds[0].split(':')[1].trim().split(' ').map(x => parseInt(x));
+				
+				const mapf = maps.map(map => {
+					map = map.slice(1).map(x => x.split(' ').map(x => parseInt(x)));
+					return n => {
+						for (const [dest, src, range] of map) {
+							if (n >= src && n < src + range) {
+								return (n - src) + dest;
+							}
+						}
+						return n;
+					}
+				});
+				const f = mapf.reduce((acc, x) => _ => x(acc(_)));
+				const mapf2 = maps.map(map => {
+					map = map.slice(1).map(x => x.split(' ').map(x => parseInt(x)));
+					return ranges => ranges.map(([a,b]) => {
+						const ranges = [[a,b,0]];
+							let i = 0;
+							ranges.forEach(([from, to]) => {
+								for (const [dest, src, range] of map) {
+									const diff = dest-src;
+									if (from >= src+range) continue;
+	                if (from >= src) { 
+	              		ranges.splice(i--, 1);
+	                	if (to < src + range) {
+	                		ranges.push([from, to, diff]);
+	                	}
+	                	else {
+	                		ranges.push([from, src+range-1, diff]);
+	                		ranges.push([src+range,to,0]);
+	                	}
+	                }
+	                else {
+	                	if (to < src) continue;
+	                	ranges.splice(i--, 1);
+	                	if (to < src + range) {
+	                		ranges.push([from,src-1,0]);
+	                		ranges.push([src, to, diff]);
+	                	}
+	                	else {
+	                		ranges.push([from, src-1,0]);
+	                		ranges.push([src,src+range-1, diff]);
+	                		ranges.push([src+range,to,0]);
+	                	}
+	                }
+	                ++i;
+								}
+            	});
+						return ranges.map(([a,b,d]) => {
+							a = a+d;
+							b = b+d;
+							return a<b ? [a,b] : [b,a];
+						});
+					}).flat().filter((x,i,a) => a.findIndex(y => y[0] === x[0] && y[1] === x[1]) === i);
+				});
+				const f2 = mapf2.reduce((acc, x) => _ => x(acc(_)));
+				
+				const sgroups = seeds.reduce((acc,x,i) => (i % 2 ? acc.push([seeds[i - 1],seeds[i-1]+x]) : void 0, acc), []);
+				
+				return [
+					Math.min(...seeds.map(f)),
+					Math.min(...sgroups.map(x => f2([x])).flat().map(x => x[0]))
+				];
+			};
+			const day6 = inp => {};
+			const day7 = inp => {};
+			const day8 = inp => {};
+			const day9 = inp => {};
+			const day10 = inp => {};
+			const day11 = inp => {};
+			const day12 = inp => {};
+			const day13 = inp => {};
+			const day14 = inp => {};
+			const day15 = inp => {};
+			const day16 = inp => {};
+			const day17 = inp => {};
+			const day18 = inp => {};
+			const day19 = inp => {};
+			const day20 = inp => {};
+			const day21 = inp => {};
+			const day22 = inp => {};
+			const day23 = inp => {};
+			const day24 = inp => {};
+			const day25 = inp => {};
+			
+			const _f = _ => fetch(`data${_}`).then(x=>x.text());
+			(async () => {
+				d1.textContent = day1(await _f(1));
+				d2.textContent = day2(await _f(2));
+				d3.textContent = day3(await _f(3));
+				d4.textContent = day4(await _f(4));
+				d5.textContent = day5(await _f(5));
+				d6.textContent = day6(await _f(6));
+				d7.textContent = day7(await _f(7));
+				d8.textContent = day8(await _f(8));
+				d9.textContent = day9(await _f(9));
+				d10.textContent = day10(await _f(10));
+				d11.textContent = day11(await _f(11));
+				d12.textContent = day12(await _f(12));
+				d13.textContent = day13(await _f(13));
+				d14.textContent = day14(await _f(14));
+				d15.textContent = day15(await _f(15));
+				d16.textContent = day16(await _f(16));
+				d17.textContent = day17(await _f(17));
+				d18.textContent = day18(await _f(18));
+				d19.textContent = day19(await _f(19));
+				d20.textContent = day20(await _f(20));
+				d21.textContent = day21(await _f(21));
+				d22.textContent = day22(await _f(22));
+				d23.textContent = day23(await _f(23));
+				d24.textContent = day24(await _f(24));
+				d25.textContent = day25(await _f(25));
+			})();
+		</script>
+	</body>
+</html>
