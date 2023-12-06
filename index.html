@@ -222,7 +222,47 @@
 					Math.min(...sgroups.map(x => f2([x])).flat().map(x => x[0]))
 				];
 			};
-			const day6 = inp => {};
+			const day6 = inp => {
+				/*inp = `Time:      7  15   30
+Distance:  9  40  200`;*/
+				const [time, dist] = inp
+					.split('\n')
+					.map(x => x.split(':')[1]
+						.split(' ')
+						.filter(x => x.trim())
+						.map(x => parseInt(x)));
+				// a * (t - a) // ta - a^2 = 0
+				// t - 2a = 0  // a = t/2
+				const cdist = (t,a) => a * (t - a);
+				
+				// ta - a^2 > d
+				// ta - a^2 - d > 0
+				// a = -1, b=t c=-d
+				const quadrange = (t,d) => {
+					//const quad = Math.sqrt(b*b - 4*a*c);
+					//const l = (-b + quad) / (2 * a); const r = (-b - quad) / (2 * a);
+					const quad = Math.sqrt(t*t - 4*d);
+					const l = (t - quad) / 2;
+					const r = (t + quad) / 2;
+					let nl = Math.ceil(l);
+					let nr = Math.floor(r);
+					return [nl+(l===nl),nr-(r===nr)];
+				};
+				
+				const nways = (t,d) => {
+					const [l,r] = quadrange(t,d);
+					return r-l+1;
+				};
+				
+				const ways = time.map((x,i) => nways(x,dist[i]));
+				
+				const ntime = parseInt(time.join(''));
+				const ndist = parseInt(dist.join(''));
+				return [
+					ways.reduce((acc,x) => acc*x),
+					nways(ntime, ndist)
+				]
+			};
 			const day7 = inp => {};
 			const day8 = inp => {};
 			const day9 = inp => {};
