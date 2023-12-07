@@ -254,7 +254,67 @@
 					nways(ntime, ndist)
 				]
 			};
-			const day7 = inp => {};
+			const day7 = inp => {
+				const mkpoints = order => Object.fromEntries(order.split('').map((x,i) => [x, i]));
+				const createCount = hand => Object.entries(hand.reduce((acc,x) => (acc[x] ??= 0, ++acc[x], acc), {}));
+				const type = (hand) => { // Requires array of chars
+					const count = createCount(hand);
+					const f = n => count.find(([,x]) => x === n);
+					if (f(5)) return 6;
+					if (f(4)) return 5;
+					if (f(3)) return f(2) ? 4 : 3;
+					if (f(2)) {
+						if (count.filter(([,x]) => x === 2).length === 2) return 2;
+						return 1;
+					}
+					return 0;
+				};
+				const compare = (points, type) => ([h1], [h2]) => {
+					h1 = h1.split(''); h2 = h2.split('');
+					const t1 = type(h1); const t2 = type(h2);
+					if (t1 !== t2) return t1 - t2;
+					for (let i = 0; i < h1.length; ++i) {
+						const p1 = points[h1[i]];
+						const p2 = points[h2[i]];
+						if (p1 !== p2) return p1 - p2;
+					}
+					return 0;
+				}
+				const hands = inp.split('\n').map(x => x.split(' '));
+				const part1 = hands.slice().sort(compare(mkpoints('23456789TJQKA'), type));
+				
+				const type2 = (hand) => {
+					const count = createCount(hand);
+					const f = n => count.find(([,x]) => x === n);
+					const fa = n => count.filter(([,x]) => x === n).length;
+					const jokerOffset = count.find(x => x[0] === 'J')?.[1] || 0;
+					if (jokerOffset) count.splice(count.findIndex(([c]) => c === 'J'), 1);
+					
+					if (f(5 - jokerOffset) || jokerOffset === 5) return 6;
+					if (f(4 - jokerOffset)) return 5;
+					if (f(3 - jokerOffset)) {
+						// JJabc Jaabb aabbb
+						switch (jokerOffset) {
+							case 0: return f(2) ? 4 : 3;
+							case 1: return fa(2) === 2 ? 4 : 3;
+							case 2: return 3;
+						}
+					}
+					if (f(2 - jokerOffset)) {
+						// Jabcd aabbc aabcd
+						if (jokerOffset) return 1;
+						if (fa(2) === 2) return 2;
+						return 1;
+					}
+					return 0;
+				}
+				
+				hands.sort(compare(mkpoints('J23456789TQKA'), type2));
+				return [
+					part1.reduce((acc, x, i) => acc + x[1] * (i + 1), 0),
+					hands.reduce((acc, x, i) => acc + x[1] * (i + 1), 0)
+				];
+			};
 			const day8 = inp => {};
 			const day9 = inp => {};
 			const day10 = inp => {};
