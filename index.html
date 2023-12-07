@@ -35,8 +35,9 @@
 			const day1 = inp => {
 				const lines = inp.split('\n');
 				const calib = x => {
+					const isdigit = x => x >= '0' && x <= '9';
 					const letters = x.split('');
-					return letters.find(x => /[0-9]/.test(x)) + letters.findLast(x => /[0-9]/.test(x));
+					return letters.find(isdigit) + letters.findLast(isdigit);
 				};
 				const speltnums = ['one','two','three','four','five','six','seven','eight','nine'];
 				const speltregex = new RegExp(`[0-9]|${speltnums.map(x => `(?=${x})`).join('|')}`, 'g');
@@ -51,13 +52,12 @@
 			};
 			const day2 = inp => {
 				const parseGame = game => {
-					let found = game.indexOf(':');
-					const id = game.substring('Game '.length, found)|0;
-					const rounds = game.substr(found+1).split(';').map(round => {
+					let [id, info] = game.split(':');
+					id = id.substr('Game '.length)|0;
+					const rounds = info.split(';').map(round => {
 						const bucket = {red:0,green:0,blue:0};
 						round.split(',').forEach(x => {
-							const num = x.substr(0, x.match(/[a-z]/).index);
-							const color = x.match(/[a-z]+/);
+							const [,num,color] = x.match(/([0-9]+)\s+([a-z]+)/);
 							bucket[color] = num|0;
 						});
 						return bucket;
@@ -82,39 +82,33 @@
 				]
 			};
 			const day3 = inp => {
+				const isdigit = x => x >= '0' && x <= '9';
 				const lines = inp.split('\n');
-				const parts = lines.map(x => Array.from(x.matchAll(/[0-9]+/g))).map((nums,y) => {
-					return nums.filter(num => {
-						const t = y-1;
-						const b = y+1;
-						const l = num.index-1;
-						const r = num.index+num[0].length;
-						for (let i = t; i <= b; ++i) {
-							for (let j = l; j <= r; ++j) {
-								const ch = lines[i]?.[j];
-								if (ch && ch !== '.' && !/[0-9]/.test(ch)) return true;
-							}
+				const nums = lines.map(x => Array.from(x.matchAll(/[0-9]+/g)));
+				const traverseBounds = (x,y,w,f) => {
+					const t = y - 1; const b = y + 1;
+					const l = x - 1; const r = x + w;
+					for (let i = t; i <= b; ++i) {
+						for (let j = l; j <= r; ++j) {
+							if (f(lines[i]?.[j],i,j)) return true;
 						}
-					});
-				}).flat().map(x => x[0]|0);
-				const pgears = lines.map(x => Array.from(x.matchAll(/[0-9]+/g))).map((nums,y) => {
-					return nums.map(num => {
-						const t = y-1;
-						const b = y+1;
-						const l = num.index-1;
-						const r = num.index+num[0].length;
+					}
+				};
+				const parts = nums
+					.map((nums,y) => nums
+						.filter(num => traverseBounds(num.index, y, num[0].length,
+							ch => ch && ch !== '.' && !isdigit(ch))))
+					.flat()
+					.map(x => x[0]|0);
+				const pgears = nums.map((nums,y) => nums.map(num => {
 						const g = [];
-						for (let i = t; i <= b; ++i) {
-							for (let j = l; j <= r; ++j) {
-								const ch = lines[i]?.[j];
-								if (ch === '*') {
-									g.push([`${i},${j}`,num[0]]);
-								}
+						traverseBounds(num.index, y, num[0].length, (ch,i,j) => {
+							if (ch === '*') {
+								g.push([`${i},${j}`,num[0]]);
 							}
-						}
+						});
 						return g;
-					}).filter(x => x.length);
-				}).flat(2);
+					}).filter(x => x.length)).flat(2);
 				const pgearsmap = {};
 				pgears.forEach(([k,v]) => {
 					pgearsmap[k] ??= [];
@@ -130,10 +124,12 @@
 			};
 			const day4 = inp => {
 				const parseCard = card => {
-					let found = card.indexOf(':');
-					const id = card.substring('Card '.length, found)|0;
-					const [win, nums] = card.substr(found+1).split('|').map(x => x.split(' ').filter(x => x.trim()).map(x => x | 0));
-					return { id, win, nums };
+					const [win, nums] = card
+						.split(':')[1]
+						.split('|')
+						.map(x => x.split(' ').filter(x => x.trim())
+						.map(x => x | 0));
+					return { win, nums };
 				};
 				
 				const cards = inp.split('\n').map(parseCard);
@@ -223,8 +219,6 @@
 				];
 			};
 			const day6 = inp => {
-				/*inp = `Time:      7  15   30
-Distance:  9  40  200`;*/
 				const [time, dist] = inp
 					.split('\n')
 					.map(x => x.split(':')[1]
@@ -233,10 +227,7 @@ Distance:  9  40  200`;*/
 						.map(x => parseInt(x)));
 				// a * (t - a) // ta - a^2 = 0
 				// t - 2a = 0  // a = t/2
-				const cdist = (t,a) => a * (t - a);
-				
-				// ta - a^2 > d
-				// ta - a^2 - d > 0
+				// ta - a^2 > d // ta - a^2 - d > 0
 				// a = -1, b=t c=-d
 				const quadrange = (t,d) => {
 					//const quad = Math.sqrt(b*b - 4*a*c);
