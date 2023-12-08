@@ -315,7 +315,46 @@
 					hands.reduce((acc, x, i) => acc + x[1] * (i + 1), 0)
 				];
 			};
-			const day8 = inp => {};
+			const day8 = inp => {
+				const [dir,mapdata] = inp.split('\n\n');
+				
+				const map = Object.fromEntries(mapdata.split('\n').map(x => {
+					const [node, info] = x.split(' = ');
+					const edges = info.matchAll(/[A-Z0-9]{3}/g);
+					return [node, [...edges].map(x => x[0])];
+				}));
+				
+				const navigate = (from, f) => {
+					let steps = 0;
+					let node = from;
+					while (!f(node)) {
+						for (const ch of dir.split(''))
+							node = map[node][ch === 'L' ? 0 : 1];
+						steps += dir.length;
+					}
+					return steps;
+				}
+				
+				const part1 = navigate('AAA', node => node === 'ZZZ');
+				
+				const part2 = (() => {
+					const allNodes = Object.keys(map);
+					const endNodes = allNodes.filter(x => x.endsWith('Z'));
+					const stepCount = allNodes
+						.filter(x => x.endsWith('A'))
+						.map(x => navigate(x, node => node.endsWith('Z')));
+					const gcd = (n,m) => {
+						let r = m;
+						do {
+							m = n; n = r;
+							r = m % n;
+						} while (r !== 0);
+						return n;
+					};
+					return stepCount.reduce((acc,x) => acc*x/gcd(acc,x));
+				})();
+				return [part1, part2];
+			};
 			const day9 = inp => {};
 			const day10 = inp => {};
 			const day11 = inp => {};
