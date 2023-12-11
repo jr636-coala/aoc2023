@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<style>
-			body { color: white; }
+			body { color: magenta; }
 		</style>
 	</head>
 	<body>
@@ -355,9 +355,276 @@
 				})();
 				return [part1, part2];
 			};
-			const day9 = inp => {};
-			const day10 = inp => {};
-			const day11 = inp => {};
+			const day9 = inp => {
+				const lines = inp.split('\n').map(x => x.split(' ').map(x => parseInt(x)));
+				
+				const diff = nums => {
+					const diff = Array(nums.length - 1);
+					for (let i = 1; i < nums.length; ++i) {
+						diff[i - 1] = nums[i] - nums[i - 1];
+					}
+					return diff;
+				}
+				
+				const diffs = lines.map(line => {
+					const diffs = [line];
+					while (diffs[diffs.length - 1].some(x => x !== 0)) {
+						diffs.push(diff(diffs[diffs.length - 1]));
+					}
+					return diffs;
+				});
+				
+				const extend = diffs => {
+					diffs.forEach(diff => diff.push(0));
+					for (let i = diffs.length - 1; i--;) {
+						const diff = diffs[i + 1].slice(-1)[0];
+						const prev = diffs[i][diffs[i].length - 2];
+						diffs[i][diffs[i].length - 1] = prev + diff;
+					}
+				};
+				
+				const backextend = diffs => {
+					diffs.forEach(diff => diff.unshift(0));
+					for (let i = diffs.length - 1; i--;) {
+						const diff = diffs[i + 1][0];
+						const prev = diffs[i][1];
+						diffs[i][0] = prev - diff;
+					}
+				};
+				
+				diffs.forEach(extend);
+				diffs.forEach(backextend);
+				
+				const part1 = diffs.reduce((acc, x) => acc + x[0].pop(), 0);
+				const part2 = diffs.reduce((acc, x) => acc + x[0][0], 0);
+				
+				return [part1,part2];
+			};
+			const day10 = inp => {
+				inp2 = `...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........`;
+				inp = inp.split('\n');
+
+				const nodeeq = (a,b) => a[0] === b[0] && a[1] === b[1];
+				const keyToEdge = k => k.split(',').map(x => parseInt(x));
+				const createGraph = inp => {
+					const width = inp[0].length;
+					const height = inp.length;
+					const edges = {};
+					const edge = (x1,y1,x2,y2) => {
+						const a = [x1,y1];
+						const b = [x2,y2];
+						edges[a] ??= [];
+						edges[a].push(b);
+					}
+					const S = [];
+					for (let y = 0; y < height; ++y) {
+						for (let x = 0; x < width; ++x) {
+							const ch = inp[y][x];
+							switch (ch) {
+								case '.': break; case 'S': S.push(x,y); break;
+								case '|': edge(x,y,x,y+1); edge(x,y,x,y-1); break;
+								case '-': edge(x,y,x+1,y); edge(x,y,x-1,y); break;
+								case 'L': edge(x,y,x,y-1); edge(x,y,x+1,y); break;
+								case 'J': edge(x,y,x,y-1); edge(x,y,x-1,y); break;
+								case '7': edge(x,y,x,y+1); edge(x,y,x-1,y); break;
+								case 'F': edge(x,y,x,y+1); edge(x,y,x+1,y); break;
+							}
+						}
+					}
+					Object.keys(edges).forEach(key => edges[key].some(to => nodeeq(S,to)) ? edge(S[0],S[1],...keyToEdge(key)) : void 0);
+					return { S, edges };
+				};
+				
+				const getDist = ({ S, edges }) => {
+					const dist = {};
+					const queue = [S];
+					let currDist = 0;
+					while (queue.length) {
+						for (let i = queue.length; i--;) {
+							const item = queue.shift();
+							if (dist[item]) continue;
+							dist[item] = currDist;
+							queue.push(...edges[item]);
+						}
+						++currDist;
+					}
+					return dist;
+				};
+				const graph = createGraph(inp);
+				const dist = getDist(graph);
+				
+				const part1 = Math.max(...Object.values(dist));
+				
+				const _inp = inp;
+				const getEnclosed = ({ S, edges }, dist) => {
+					inp = inp
+						.map((x,i) => x.split('')
+							.map((y,j) => dist[[j,i]] ? y : '.'));
+					let dir = edges[S]
+						.map(([x,y]) => [x-S[0],y-S[1]])
+						.reduce((acc, x) => [acc[0]+x[0],acc[1]+x[1]]); // The direction of the marked cell
+					let nnode = edges[S][0]; // Where to go next
+					let node = S;
+					let mark = 'M'; let omark = 'm';
+					const queue = [];
+					const setdir = n => dir =
+						dir[0]+n[0] === 0 && dir[1]+n[1] === 0
+							? ([mark,omark]=[omark,mark], n)
+							: n;
+					do {
+						const [x,y] = node;
+						const [dx,dy] = dir;
+						const s = (x,y, m) => {
+							const r = inp[y];
+							if (r && r[x] === '.') {
+								r[x] = m;
+								queue.push([x,y]);
+							}
+						};
+						s(x+dx,y+dy, mark);
+						s(x-dx,y-dy, omark);
+						s(x+dx,y-dy, omark);
+						s(x-dx,y+dy, omark);
+						
+						switch (inp[nnode[1]][nnode[0]]) {
+							case 'L': setdir([1,-1]); break;
+							case 'J': setdir([-1,-1]); break;
+							case '7': setdir([-1,1]); break;
+							case 'F': setdir([1,1]); break;
+						}
+						[node,nnode]=[nnode,node];
+						nnode = edges[node].find(x => !nodeeq(x, nnode));
+					} while (!nodeeq(S, node));
+					
+					// Expand
+					while (queue.length) {
+						const [x,y] = queue.shift();
+						const ch = (x,y) => inp[y]?.[x];
+						const m = ch(x,y);
+						const setAndAdd = (x,y) => (inp[y][x] = m, queue.push([x,y]));
+						if (ch(x+1,y) === '.') setAndAdd(x+1,y);
+						if (ch(x-1,y) === '.') setAndAdd(x-1,y);
+						if (ch(x,y+1) === '.') setAndAdd(x,y+1);
+						if (ch(x,y-1) === '.') setAndAdd(x,y-1);
+					}
+					
+					//console.log(inp.map(x => x.join('')).join('\n'));
+					const count = c => inp
+						.reduce((acc, x) => acc + x
+							.reduce((acc, x) => acc + (x === c ? 1 : 0), 0), 0);
+					return [count('m'), count('M')];
+				};
+				const part2 = getEnclosed(graph, dist);
+				
+				inp = _inp;
+				const shoelace = ({ S, edges }) => {
+					const coords = [];
+					let node = S;
+					let nnode = edges[S][0];
+					const dir = edges[S]
+						.map(([x,y]) => [x-S[0],y-S[1]])
+						.reduce((acc, x) => [acc[0]+x[0],acc[1]+x[1]])
+						.map(x => Math.max(0, -x));
+					do {
+						const [x,y] = node;
+						if ('SLJ7F'.includes(inp[y][x])) coords.push(node);
+						/*switch (inp[y][x]) {
+							case 'S': coords.push([x+dir[0], y+dir[1]]); break;
+							case 'L': coords.push([x,y+1]); break;
+							case 'J': coords.push([x+1,y+1]); break;
+							case '7': coords.push([x+1,y]); break;
+							case 'F': coords.push(node); break;
+						}*/
+						[node,nnode]=[nnode,node];
+						nnode = edges[node].find(x => !nodeeq(x, nnode));
+					} while (!nodeeq(S, node));
+					
+					// Trapezoid_formula
+					let sum = 0;
+					for (let i = 0; i < coords.length - 1; ++i) {
+						const [xi,yi] = coords[i];
+						const [xi1,yi1] = coords[i + 1];
+						const x = xi - xi1;
+						const y = yi + yi1;
+						const xoff = x === 0 ? 0 : -x/Math.abs(x);
+						const yoff = y === 0 ? 0 : -y/Math.abs(y);
+						sum += (x + xoff) * (y + yoff);
+					}
+					sum /= 2;
+					//console.log(coords);
+					return Math.abs(sum) - part1 + 1;
+				};
+				
+				
+				//console.log(shoelace(graph));
+				return [part1,part2];
+			};
+			const day11 = inp => {
+				const expand = (coords, by) => {
+					const rows = inp.split('\n').map((x,i) => [i, x]);
+					const cols = inp
+						.split('\n')
+						.map(x => x.split(''))
+						.reduce((acc, x) => {
+							x.forEach((x, i) => acc[i][1].push(x));
+							return acc;
+						}, Array(rows[0][1].length)
+								.fill(0)
+								.map((x,i) => [i, []]))
+								.map(x => [x[0], x[1].join('')]);
+					const isEmpty = ([,x]) => !x.replaceAll('.','');
+					const expandRows = rows.filter(isEmpty).map(x => x[0]);
+					const expandCols = cols.filter(isEmpty).map(x => x[0]);
+					return coords.map(([x,y]) => {
+						let diffx = 0;
+						let diffy = 0;
+						for (const col of expandCols) {
+							if (col < x) diffx += by - 1;
+						}
+						for (const row of expandRows) {
+							if (row < y) diffy += by - 1;
+						}
+						return [x+diffx, y+diffy];
+					});
+				};
+				
+				const dist = coords => {
+					const calcDist = (x1, y1, x2, y2) =>
+						Math.abs(x1 - x2) + Math.abs(y1 - y2);
+					
+					const dists = coords
+						.map(([x1,y1],i) => coords
+							.map(([x2, y2],j) => j > i
+								? calcDist(x1, y1, x2, y2)
+								: void 0))
+						.flat()
+						.filter(x => x);
+					
+					return dists;
+				};
+				
+				const coords = inp
+					.split('\n')
+					.map((x,i) => x
+						.split('')
+							.map((x,j) => x === '#' ? [[j,i]] : []))
+					.flat(2);
+				
+				const part1 = dist(expand(coords, 2))
+					.reduce((acc, x) => acc+x);
+				const part2 = dist(expand(coords, 1_000_000))
+					.reduce((acc, x) => acc+x);
+				
+				return [part1, part2];
+			};
 			const day12 = inp => {};
 			const day13 = inp => {};
 			const day14 = inp => {};
